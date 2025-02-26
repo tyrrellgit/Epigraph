@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+if(ENABLE_OSQP)
+    find_package(osqp REQUIRED CONFIG)
+endif()
+
+if(ENABLE_ECOS)
+    find_package(ecos REQUIRED CONFIG)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/epigraph_export.cmake")
