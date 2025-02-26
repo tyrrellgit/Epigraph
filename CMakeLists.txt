@@ -1,10 +1,33 @@
 cmake_minimum_required(VERSION 3.5)
-project(epigraph)
+project(epigraph VERSION 0.4.0)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# set up directories for UNIX-like systems
+if(UNIX AND NOT APPLE)
+    include(GNUInstallDirs)
+    set(_EPIGRAPH_INSTALL_LIBDIR_DEFAULT "${CMAKE_INSTALL_LIBDIR}")
+else()
+    set(_EPIGRAPH_INSTALL_LIBDIR_DEFAULT "lib")
+endif()
+if(NOT EPIGRAPH_INSTALL_LIBDIR)
+  set(EPIGRAPH_INSTALL_LIBDIR "${_EPIGRAPH_INSTALL_LIBDIR_DEFAULT}" CACHE STRING
+      "Library installation directory." FORCE)
+endif()
+
+# accept user overrides for libdir
+mark_as_advanced(EPIGRAPH_INSTALL_LIBDIR)
+message(STATUS "Library installation directory: ${EPIGRAPH_INSTALL_LIBDIR}")
+message(STATUS "Header installation directory : ${CMAKE_INSTALL_INCLUDEDIR}")
+
+# set up the library
 add_library(epigraph SHARED)
-target_include_directories(epigraph PUBLIC include)
+
+# add the build and install interfaces for headers
+target_include_directories(epigraph PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> # for builds
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/epigraph>) # for installs
+
 target_sources(epigraph PRIVATE
     src/parameter.cpp
     src/variable.cpp
@@ -135,3 +158,37 @@ endif()
 
 target_compile_options(epigraph PUBLIC "$<$<CONFIG:DEBUG>:${DEBUG_OPTIONS}>")
 target_compile_options(epigraph PUBLIC "$<$<CONFIG:RELEASE>:${RELEASE_OPTIONS}>")
+
+# ==== Install ====
+
+# Install the header directory
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/epigraph")
+
+# Installation of the library.
+install(TARGETS epigraph
+    EXPORT epigraph_export
+    LIBRARY DESTINATION "${EPIGRAPH_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${EPIGRAPH_INSTALL_LIBDIR}"
+    RUNTIME DESTINATION bin
+)
+
+# Setup of the CMake config and versioning files.
+include(CMakePackageConfigHelpers)
+message(STATUS "Epigraph version ${PROJECT_VERSION}")
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/epigraph-config-version.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/epigraph-config.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/epigraph-config.cmake" 
+  INSTALL_DESTINATION "${EPIGRAPH_INSTALL_LIBDIR}/cmake/epigraph"
+  )
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/epigraph-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/epigraph-config-version.cmake"
+    DESTINATION "${EPIGRAPH_INSTALL_LIBDIR}/cmake/epigraph")
+
+install(EXPORT epigraph_export NAMESPACE epigraph:: DESTINATION "${EPIGRAPH_INSTALL_LIBDIR}/cmake/epigraph")
